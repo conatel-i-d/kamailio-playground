@@ -187,7 +187,7 @@ loadmodule "app_python3.so"
 
 ####### Module Configuration #######
 modparam("app_python3", "load", "/usr/local/kamailio/kamailio.py")
-cfengine "python"
+cfgengine "python"
 ```
 
 ```python
@@ -207,6 +207,10 @@ def mod_init():
 class Kamailio:
     def __init__(self):
         ksr_info('Kamailio.__init__")
+
+    def child_init(self, rank):
+        ksr_info(f'kamailio.child_init({str(rank)})')
+        return 0
     
     # SIP request routing
     def ksr_request_route(self, msg):
