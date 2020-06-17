@@ -2,7 +2,6 @@ from utils import ksr_print
 from Kamailio import Kamailio
 
 def mod_init():
-    ksr_print('From python mod init')
     return Kamailio()
 
 class Kamailio:
