@@ -202,7 +202,6 @@ def mod_init():
   ksr_info('From python mod init")
   return Kamailio()
 
-
 # Kamailio class containing the entire configuration
 class Kamailio:
     def __init__(self):
@@ -212,7 +211,6 @@ class Kamailio:
         ksr_info(f'kamailio.child_init({str(rank)})')
         return 0
     
-    # SIP request routing
     def ksr_request_route(self, msg):
         ksr_info('Kamailio.ksr_request_route')
 ```
