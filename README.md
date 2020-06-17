@@ -121,7 +121,23 @@ rtpproxy_manage("iew");
 - `c`: Indica que los campos `c=` del cuerpo SDP del mensaje SIP también deben ser modificados.
 - `w`: Indica que se debe forzar el uso de RTP simetrico para el UA que envía el mensaje.
 
+## `include_file` e `import_file`
+
+Se utiliza para cargar contenido en la configuración previo a su parseo.
+
+```kamailio
+include_file "<path_to_file>"
+```
+
+El `path_to_file` puede ser relativo. Cada uno de estos archivos puede también referenciar a otros. Existe un límite en la profundidad de archivos referenciados de 10.
+
+La única diferencia entre `include_file` e `import_file` es que el segundo no tira un error cuando no se puede encontrar el archivo.
+
 ## Python KEMI Interpreter
+
+**Despues de realizar varias pruebas, encontre que el comportamiento de la misma configuración usando KEMI con Python y Native Script no son equivalentes. Esto es, los mismos comandos utilizados en KEMI con Python y en Native Script no se comportan de la misma manera. Esto fue probado en una configuración de unas pocas líneas. La conclusión, fue que KEMI puede utilizarse para realizar acciones adicionales que no se puedan realizar desde Native Script. Todo lo demás, como el manejo de los mensajes, debe realizarse sobre Native Script. Al menos por ahora.**
+
+**OBS: Esta observación es solo valida para el módulo de Python, ya que no se realizarón las mismas pruebas con otros lenguajes.**
 
 Con el fín de exponer lenguajes de scripting más completos que el nativo de Kamailio, se creo el KEMI Interprete. El mismo, permite la carga de ciertos módulos, que permiten escribir la configuración de Kamailio en otros lenguajes de scripting como Python, Lua, Ruby, JavaScript, etc.
 
