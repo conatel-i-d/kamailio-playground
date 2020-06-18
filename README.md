@@ -79,6 +79,18 @@ La configuración esta compuesta por las siguientes secciones:
 
 Esta configuración es leída solo una vez al momento que se inicia el proceso de Kamailio. Luego se compila, y se almacena en memoria. Una vez cargada, cada mensaje o respuesta recibida será tratado en base a esta configuración.
 
+### Interesting SIP Codes
+
+#### 487
+
+> The 487 Response indicates that the previous request was terminated by user/application action. The most common occurrence is when the CANCEL happens as explained above. But it is also not limited to CANCEL. There are other cases where such responses can be relevant. So it depends on where you are seeing this behavior and whether its a user or application action that caused it.
+> 
+> 15.1.2 UAS Behavior==> BYE Handling in RFC 3261
+> 
+> The UAS MUST still respond to any pending requests received for that dialog. It is RECOMMENDED that a 487 (Request Terminated) response be generated to those pending requests.
+> 
+> [https://stackoverflow.com/a/22721592/1930817](https://stackoverflow.com/a/22721592/1930817)
+
 ## Kamailio Proxy en Modo Bridge
 
 En este escenario, se configura el kamailio en un servidor con dos interfaces de red. Una que mira hacia una DMZ (10.0.1.0/24), y otra que mira hacia la red interna (10.0.2.0/24). La interfaz del Kamailio esta públicada en Internet con la IP 1.1.1.1. 
@@ -172,7 +184,7 @@ modparam("rtpproxy", "rtpproxy_sock", "udp:127.0.0.1:7722")
 Dentro del módulo `rtpproxy` existe una función llamada `rtpproxy_manage` que se encarga de gestionar la interacción con el proceso de `rtpproxy`. Esta función, consume una serie de flags que modifican su comportamiento. En este caso:
 
 ```kamailio
-rtpproxy_manage("iew");
+rtpproxy_manage("iewcor");
 ```
 
 > i, e - these flags specify the direction of the SIP message. These flags only make sense when rtpproxy is running in bridge mode. 'i' means internal network (LAN), 'e' means external network (WAN). 'i' corresponds to rtpproxy's first interface, 'e' corresponds to rtpproxy's second interface. You always have to specify two flags to define the incoming network and the outgoing network. For example, 'ie' should be used for SIP message received from the local interface and sent out on the external interface, and 'ei' vice versa. Other options are 'ii' and 'ee'. So, for example if a SIP requests is processed with 'ie' flags, the corresponding response must be processed with 'ie' flags.
@@ -185,7 +197,9 @@ rtpproxy_manage("iew");
 
 - `ie`: Indica la dirección de los mensajes SIP cuando `rtpproxy` opera en modo bridge. `i` indica la red interna, y e indica la red externa. Siempre es necesario indicar los dos flags, lo que puede modificarse es el órden de los flags. Las combincaciones posibles on `ii`, `ee`, `ie`, e `ei`. `ie` indica que el mensaje es recibido por la interface local, y es enviado por la externa. Los mensajes procesado con un par de flags, deben ser procesados en la respuesta con el mismo par de flags.
 - `c`: Indica que los campos `c=` del cuerpo SDP del mensaje SIP también deben ser modificados.
+- `o`: Indica que el campo de IP de origen `o=` tambien debe ser modificado.
 - `w`: Indica que se debe forzar el uso de RTP simetrico para el UA que envía el mensaje.
+- `r`: Indica que la dirección del cuerpo SDP es confiable. Sin este flag `rtpproxy` ignora la dirección y usa la dirección de origen para pasarle a `rtpproxy`.
 
 ## `include_file` e `import_file`
 
@@ -357,8 +371,69 @@ Verifica que el encabezado `To` cuente con el parámetro `tag`.
 if (has_totag()) {
   // ...
 }
+```
 
 **OBS: Importante notar que `t_relay_cancel` incluye `t_lookup_canel` internamente.**
+
+### `loose_route()`
+
+Esta función realiza el ruteo de requests SIP que contienen encabezados `Route`. El nombre es un poco confuso porque esta función **tambien rutea mesajes que se encuentren trabajando en formato _strict routing_.**
+
+Se utiliza usualmente para rutear mensajes in-dialog como `ACK`, `BYE`, y `reINVITE`. O cualquier otro mensaje que tenga un encabezado `Route`.
+
+El valor de respuesta es:
+
+- `-1 (false)`: si no contiene un encabezado `Route`.
+- `1 (true)`: si contiene un encabezado `Route`.
+
+Cuando la función detecta un encabezado `Route` se comporta de acuerdo a la sección 16.12 de la RFC 3261. Excepto en un caso: cuando el request no tiene un tag en el encabezado `To`, y hay un solo encabezado `Route` indicando el proxy local. En este caso el encabezado se elimina y la función devuelve `-1 (false)`.
+
+```kamailio
+loose_route();
+```
+
+A continuación se incluye la sección 16.12 de la RFC3261:
+
+```txt
+16.12 Summary of Proxy Route Processing
+
+  In the absence of local policy to the contrary, the processing a
+  proxy performs on a request containing a Route header field can be
+  summarized in the following steps.
+
+    1.  The proxy will inspect the Request-URI.  If it indicates a
+        resource owned by this proxy, the proxy will replace it with
+        the results of running a location service.  Otherwise, the
+        proxy will not change the Request-URI.
+
+    2.  The proxy will inspect the URI in the topmost Route header
+        field value.  If it indicates this proxy, the proxy removes it
+        from the Route header field (this route node has been
+        reached).
+
+    3.  The proxy will forward the request to the resource indicated
+        by the URI in the topmost Route header field value or in the
+        Request-URI if no Route header field is present.  The proxy
+        determines the address, port and transport to use when
+        forwarding the request by applying the procedures in [4] to
+        that URI.
+
+  If no strict-routing elements are encountered on the path of the
+  request, the Request-URI will always indicate the target of the
+  request.
+```
+
+### `record_route([sparams])`
+
+Esta función agrega un encabezado `Record-Route`. Este encabezado se colocará antes que cualquier otro encabezado `Record-Route` existente.
+
+Si se incluye un `string` al momento de llamar a la función, el mismo se adjuntara al encabezado `Record-Route`. Este string debe seguir el siguiente esquema: `;name=value`.
+
+**OBS: Si esta activa la funcionalidad de adjuntar `From-tag` y se quiere utilizar esta función para mensajes dentro de dialogos, debe ser ejecutada despues de `loose_route()` de manera de poder detectar la dirección.
+
+```kamailio
+record_route();
+```
 
 ## Python KEMI Interpreter
 
