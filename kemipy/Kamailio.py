@@ -2,11 +2,14 @@
 # It must have at least the `ksr_request_route` method defined.
 # If not, Kamailio will throw an error.
 
+import os
 import KSR as KSR
+
 from utils import ksr_print
 
-PBX_IP = '192.168.22.56'
-PBX_PORT = '5060'
+PBX_IP = os.environ.get('PBX_IP')
+PBX_PORT = os.environ.get('PBX_PORT')
+FIREBASE_SERVER_KEY = os.environ.get('FIREBASE_SERVER_KEY')
 
 class Kamailio:
     def __init__(self):
